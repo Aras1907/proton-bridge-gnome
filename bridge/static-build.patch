@@ -1,0 +1,226 @@
+diff --git a/internal/fido/fido.go b/internal/fido/fido.go
+index b3516bd..0725e21 100644
+--- a/internal/fido/fido.go
++++ b/internal/fido/fido.go
+@@ -15,7 +15,7 @@
+ // You should have received a copy of the GNU General Public License
+ // along with Proton Mail Bridge. If not, see <https://www.gnu.org/licenses/>.
+ 
+-//go:build darwin || linux
++//go:build (darwin || linux) && !nofido
+ 
+ package fido
+ 
+diff --git a/internal/fido/fido_nofido.go b/internal/fido/fido_nofido.go
+new file mode 100644
+index 0000000..50b9fd7
+--- /dev/null
++++ b/internal/fido/fido_nofido.go
+@@ -0,0 +1,45 @@
++// Copyright (c) 2026 Proton AG
++//
++// This file is part of Proton Mail Bridge.
++//
++// Proton Mail Bridge is free software: you can redistribute it and/or modify
++// it under the terms of the GNU General Public License as published by
++// the Free Software Foundation, either version 3 of the License, or
++// (at your option) any later version.
++//
++// Proton Mail Bridge is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++//
++// You should have received a copy of the GNU General Public License
++// along with Proton Mail Bridge. If not, see <https://www.gnu.org/licenses/>.
++
++//go:build linux && nofido
++
++// Build without libfido2 (and cgo for it): security keys are unsupported.
++
++package fido
++
++import (
++	"context"
++	"errors"
++
++	"github.com/ProtonMail/go-proton-api"
++)
++
++var ErrAssertionCancelled = errors.New("FIDO assertion cancelled")
++
++var ErrUnsupported = errors.New("security keys are not supported in this build")
++
++func IsPinSupported() (bool, error) {
++	return false, ErrUnsupported
++}
++
++func AuthWithHardwareKeyGUI(_ context.Context, _ *proton.Client, _ proton.Auth, _ chan struct{}, _ chan struct{}, _ string) error {
++	return ErrUnsupported
++}
++
++func AuthWithHardwareKeyCLI(_ CLIProvider, _ *proton.Client, _ proton.Auth) error {
++	return ErrUnsupported
++}
+diff --git a/internal/frontend/grpc/fido.go b/internal/frontend/grpc/fido.go
+index 89f8235..05638a3 100644
+--- a/internal/frontend/grpc/fido.go
++++ b/internal/frontend/grpc/fido.go
+@@ -15,7 +15,7 @@
+ // You should have received a copy of the GNU General Public License
+ // along with Proton Mail Bridge. If not, see <https://www.gnu.org/licenses/>.
+ 
+-//go:build linux || darwin
++//go:build (linux || darwin) && !nofido
+ 
+ package grpc
+ 
+diff --git a/internal/frontend/grpc/fido_nofido.go b/internal/frontend/grpc/fido_nofido.go
+new file mode 100644
+index 0000000..dbf7735
+--- /dev/null
++++ b/internal/frontend/grpc/fido_nofido.go
+@@ -0,0 +1,33 @@
++// Copyright (c) 2026 Proton AG
++//
++// This file is part of Proton Mail Bridge.
++//
++// Proton Mail Bridge is free software: you can redistribute it and/or modify
++// it under the terms of the GNU General Public License as published by
++// the Free Software Foundation, either version 3 of the License, or
++// (at your option) any later version.
++//
++// Proton Mail Bridge is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++//
++// You should have received a copy of the GNU General Public License
++// along with Proton Mail Bridge. If not, see <https://www.gnu.org/licenses/>.
++
++//go:build linux && nofido
++
++package grpc
++
++import (
++	"context"
++
++	"google.golang.org/protobuf/types/known/emptypb"
++)
++
++func (s *Service) LoginFido(_ context.Context, login *LoginRequest) (*emptypb.Empty, error) {
++	s.log.WithField("username", login.Username).Debug("LoginFido unsupported")
++	_ = s.SendEvent(NewLoginError(LoginErrorType_FIDO_ERROR, "Security keys are not supported in this build."))
++	s.loginClean()
++	return &emptypb.Empty{}, nil
++}
+diff --git a/pkg/keychain/helper_libsecret_linux.go b/pkg/keychain/helper_libsecret_linux.go
+new file mode 100644
+index 0000000..91ccecc
+--- /dev/null
++++ b/pkg/keychain/helper_libsecret_linux.go
+@@ -0,0 +1,40 @@
++// Copyright (c) 2026 Proton AG
++//
++// This file is part of Proton Mail Bridge.
++//
++// Proton Mail Bridge is free software: you can redistribute it and/or modify
++// it under the terms of the GNU General Public License as published by
++// the Free Software Foundation, either version 3 of the License, or
++// (at your option) any later version.
++//
++// Proton Mail Bridge is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++//
++// You should have received a copy of the GNU General Public License
++// along with Proton Mail Bridge. If not, see <https://www.gnu.org/licenses/>.
++
++//go:build !nolibsecret
++
++package keychain
++
++import (
++	"github.com/docker/docker-credential-helpers/credentials"
++	"github.com/docker/docker-credential-helpers/secretservice"
++	"github.com/sirupsen/logrus"
++	"golang.org/x/sys/execabs"
++)
++
++func addSecretServiceHelper(helpers Helpers) {
++	if _, err := execabs.LookPath("gnome-keyring"); err == nil && isUsable(newSecretServiceHelper("")) {
++		helpers[SecretService] = newSecretServiceHelper
++		logrus.WithField("keychain", "SecretService").Info("Keychain is usable.")
++	} else {
++		logrus.WithField("keychain", "SecretService").Debug("Keychain is not available.")
++	}
++}
++
++func newSecretServiceHelper(string) (credentials.Helper, error) {
++	return &secretservice.Secretservice{}, nil
++}
+diff --git a/pkg/keychain/helper_linux.go b/pkg/keychain/helper_linux.go
+index a38c632..e42aa63 100644
+--- a/pkg/keychain/helper_linux.go
++++ b/pkg/keychain/helper_linux.go
+@@ -20,7 +20,6 @@ package keychain
+ import (
+ 	"github.com/docker/docker-credential-helpers/credentials"
+ 	"github.com/docker/docker-credential-helpers/pass"
+-	"github.com/docker/docker-credential-helpers/secretservice"
+ 	"github.com/sirupsen/logrus"
+ 	"golang.org/x/sys/execabs"
+ )
+@@ -41,12 +40,7 @@ func listHelpers() (Helpers, string) {
+ 		logrus.WithField("keychain", "SecretServiceDBus").Debug("Keychain is not available.")
+ 	}
+ 
+-	if _, err := execabs.LookPath("gnome-keyring"); err == nil && isUsable(newSecretServiceHelper("")) {
+-		helpers[SecretService] = newSecretServiceHelper
+-		logrus.WithField("keychain", "SecretService").Info("Keychain is usable.")
+-	} else {
+-		logrus.WithField("keychain", "SecretService").Debug("Keychain is not available.")
+-	}
++	addSecretServiceHelper(helpers)
+ 
+ 	if _, err := execabs.LookPath("pass"); err == nil && isUsable(newPassHelper("")) {
+ 		helpers[Pass] = newPassHelper
+@@ -74,7 +68,3 @@ func newDBusHelper(string) (credentials.Helper, error) {
+ func newPassHelper(string) (credentials.Helper, error) {
+ 	return &pass.Pass{}, nil
+ }
+-
+-func newSecretServiceHelper(string) (credentials.Helper, error) {
+-	return &secretservice.Secretservice{}, nil
+-}
+diff --git a/pkg/keychain/helper_nolibsecret_linux.go b/pkg/keychain/helper_nolibsecret_linux.go
+new file mode 100644
+index 0000000..5dacb5e
+--- /dev/null
++++ b/pkg/keychain/helper_nolibsecret_linux.go
+@@ -0,0 +1,24 @@
++// Copyright (c) 2026 Proton AG
++//
++// This file is part of Proton Mail Bridge.
++//
++// Proton Mail Bridge is free software: you can redistribute it and/or modify
++// it under the terms of the GNU General Public License as published by
++// the Free Software Foundation, either version 3 of the License, or
++// (at your option) any later version.
++//
++// Proton Mail Bridge is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++//
++// You should have received a copy of the GNU General Public License
++// along with Proton Mail Bridge. If not, see <https://www.gnu.org/licenses/>.
++
++//go:build nolibsecret
++
++package keychain
++
++// Build without libsecret (cgo): the D-Bus Secret Service helper talks to
++// the same keyring.
++func addSecretServiceHelper(Helpers) {}

@@ -1,0 +1,4 @@
+#!/bin/sh
+# Stand-in for the Bridge core binary (see fake_bridge.py).
+here=$(dirname "$(realpath "$0")")
+exec "$here/.venv/bin/python" "$here/fake_bridge.py" "$@"

@@ -1,0 +1,10 @@
+{
+  "uuid": "proton-bridge@aras.local",
+  "name": "Proton Mail Bridge",
+  "description": "Sign in to Proton once and get a password for your mail app. Runs a built-in Proton Mail Bridge in the background; nothing else to install.",
+  "version": 3,
+  "shell-version": ["48", "49", "50"],
+  "session-modes": ["user", "unlock-dialog"],
+  "gettext-domain": "proton-bridge",
+  "url": "https://github.com/ProtonMail/proton-bridge"
+}

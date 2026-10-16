@@ -1,0 +1,6 @@
+dist/
+.build/
+.preview/
+.test/
+tests/.venv/
+src/bin/
