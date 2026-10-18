@@ -22,7 +22,8 @@ If your Proton session ever expires, a notification takes you back to it.
 curl -fsSL https://raw.githubusercontent.com/Aras1907/proton-bridge-gnome/main/install.sh | sh
 ```
 
-It downloads the latest release for your CPU, installs it and enables it.
+It works on 64-bit Intel/AMD (`x86_64`) and ARM (`aarch64`) PCs: it downloads
+the latest release for your CPU, installs it and enables it.
 Then log out and back in and sign in with
 `gnome-extensions prefs proton-bridge@aras.local`.
 
@@ -45,7 +46,8 @@ Log out and back in, enable it with
    and installs the extension. The build needs `gcc`, `git`, `curl` and a
    static libc; the Go toolchain and the pinned Bridge release are downloaded
    and checksum-verified into `.build/`. `make pack` makes an installable zip
-   with Bridge included.
+   with Bridge included, for the CPU you build on
+   (`dist/proton-bridge@aras.local.<arch>.zip`).
 2. Log out and back in, then run `gnome-extensions enable proton-bridge@aras.local`.
 3. Sign in: run `gnome-extensions prefs proton-bridge@aras.local`.
 
@@ -89,6 +91,11 @@ When signed in, the extension adds no UI and does no polling. Its cost is one
 idle local connection to Bridge. Bridge itself does the mail syncing. If Bridge
 crashes, the extension restarts it, waiting longer after each failure, and
 gives up after 5 quick failures.
+
+## Releases
+
+Pushing a `v*` tag runs `.github/workflows/release.yml`, which builds the zip
+natively on x86_64 and aarch64 GitHub runners and attaches both to the release.
 
 ## Development
 

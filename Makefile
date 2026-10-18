@@ -2,6 +2,9 @@ UUID := proton-bridge@aras.local
 DEST := $(HOME)/.local/share/gnome-shell/extensions/$(UUID)
 VENV := tests/.venv
 BRIDGE := src/bin/proton-bridge
+# CPU the bundled Bridge is built for (bridge/build.sh builds for this machine).
+ARCH := $(patsubst arm64,aarch64,$(patsubst amd64,x86_64,$(shell uname -m)))
+ZIP := dist/$(UUID).$(ARCH).zip
 
 .PHONY: install uninstall pack test venv bridge
 
@@ -19,10 +22,13 @@ install: $(BRIDGE)
 uninstall:
 	rm -rf "$(DEST)"
 
-# Zip for `gnome-extensions install`.
+# Zip for `gnome-extensions install`, named for this CPU like the release
+# assets that install.sh downloads (x86_64 or aarch64).
 pack: $(BRIDGE)
 	mkdir -p dist
-	gnome-extensions pack src --extra-source=lib --extra-source=bin --force -o dist
+	rm -f "$(ZIP)"
+	cd src && zip -qr "../$(ZIP)" metadata.json extension.js prefs.js lib bin
+	@echo "Packed $(ZIP)"
 
 # Fake Bridge (real bridge.proto over gRPC) needs grpcio.
 venv: $(VENV)/bin/python

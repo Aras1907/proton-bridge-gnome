@@ -1,5 +1,6 @@
 #!/bin/sh
-# One-step installer: downloads the latest release for this CPU and installs it.
+# One-step installer: downloads the latest release for this CPU (64-bit
+# Intel/AMD or ARM) and installs it.
 #   curl -fsSL https://raw.githubusercontent.com/Aras1907/proton-bridge-gnome/main/install.sh | sh
 set -eu
 
@@ -14,7 +15,7 @@ command -v gnome-extensions >/dev/null 2>&1 || {
 case "$(uname -m)" in
   x86_64 | amd64) arch=x86_64 ;;
   aarch64 | arm64) arch=aarch64 ;;
-  *) echo "Unsupported CPU: $(uname -m)" >&2; exit 1 ;;
+  *) echo "Unsupported CPU: $(uname -m) (needs 64-bit Intel/AMD or ARM)" >&2; exit 1 ;;
 esac
 
 tmp=$(mktemp -d)
@@ -23,7 +24,10 @@ zip="$tmp/$UUID.zip"
 
 echo "Downloading Proton Mail Bridge extension ($arch)..."
 curl -fL --progress-bar -o "$zip" \
-  "https://github.com/$REPO/releases/latest/download/$UUID.$arch.zip"
+  "https://github.com/$REPO/releases/latest/download/$UUID.$arch.zip" || {
+  echo "Download failed: no $arch build in the latest release of $REPO." >&2
+  exit 1
+}
 
 gnome-extensions install --force "$zip"
 gnome-extensions enable "$UUID" 2>/dev/null || true
