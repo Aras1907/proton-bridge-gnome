@@ -6,5 +6,5 @@
   "shell-version": ["48", "49", "50"],
   "session-modes": ["user", "unlock-dialog"],
   "gettext-domain": "proton-bridge",
-  "url": "https://github.com/ProtonMail/proton-bridge"
+  "url": "https://github.com/Aras1907/proton-bridge-gnome"
 }

@@ -16,7 +16,17 @@ If your Proton session ever expires, a notification takes you back to it.
 
 ## Install
 
-### From a release (easiest)
+### One command (easiest)
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/Aras1907/proton-bridge-gnome/main/install.sh | sh
+```
+
+It downloads the latest release for your CPU, installs it and enables it.
+Then log out and back in and sign in with
+`gnome-extensions prefs proton-bridge@aras.local`.
+
+### From a release zip
 
 Download the zip for your CPU (`x86_64` or `aarch64`) from the
 [Releases page](../../releases/latest), then:
