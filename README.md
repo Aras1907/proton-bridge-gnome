@@ -1,8 +1,8 @@
 # Proton Mail Bridge for GNOME
 
 Sign in to Proton once, and the extension shows the Bridge password for your
-address. Enter that password in your mail app (Convey, Geary, Evolution, …) to
-sign in to Proton Mail.
+address. Enter that password in your mail app (Convey, Geary, Evolution, …) or to 
+your online account in the gnome settings to sign in to Proton Mail.
 
 Proton Mail Bridge is built in: the extension ships the Bridge core as one
 static binary (`bin/proton-bridge`, no libc or other libraries needed, so it
